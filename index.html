@@ -336,6 +336,24 @@ html, body { height: 100%; overflow: hidden; font-family: 'Outfit', sans-serif; 
     </div>
   </div>
 
+  <!-- ══════════ SCREEN 5 — RÉGLAGES ══════════ -->
+  <div class="screen" id="screen-settings">
+    <div class="screen-header"><h2>⚙️ Réglages</h2></div>
+    <div style="padding:1.25rem">
+      <div class="section-title">Clé API Anthropic</div>
+      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1rem;line-height:1.6">Votre clé est stockée uniquement sur votre téléphone et n'est jamais partagée.</p>
+      <input id="api-key-input" type="password" placeholder="sk-ant-api03-..." style="width:100%;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:0.75rem 1rem;font-family:'Outfit',sans-serif;font-size:0.85rem;outline:none;background:white;color:var(--ink);margin-bottom:0.75rem;">
+      <button onclick="saveApiKey()" style="width:100%;background:var(--green);color:white;border:none;padding:0.85rem;border-radius:var(--radius);font-family:'Outfit',sans-serif;font-size:0.95rem;font-weight:600;cursor:pointer;">💾 Enregistrer la clé</button>
+      <div id="api-key-status" style="margin-top:0.75rem;font-size:0.8rem;text-align:center;"></div>
+      <div style="margin-top:2rem;padding:1rem;background:var(--green-ultra);border-radius:var(--radius-sm);font-size:0.78rem;color:var(--muted);line-height:1.6;">
+        <strong style="color:var(--green)">Comment obtenir une clé ?</strong><br>
+        1. Allez sur console.anthropic.com<br>
+        2. API Keys → Create Key<br>
+        3. Copiez la clé et collez-la ci-dessus
+      </div>
+    </div>
+  </div>
+
   <!-- BOTTOM NAV -->
   <nav class="bottom-nav">
     <button class="nav-btn active" id="nav-generate" onclick="switchScreenByName('generate')">
@@ -353,6 +371,10 @@ html, body { height: 100%; overflow: hidden; font-family: 'Outfit', sans-serif; 
     <button class="nav-btn" id="nav-history" onclick="switchScreenByName('history')">
       <div class="nav-icon">📅</div>
       <span class="nav-label">Historique</span>
+    </button>
+    <button class="nav-btn" id="nav-settings" onclick="switchScreenByName('settings')">
+      <div class="nav-icon" style="position:relative">⚙️<span class="nav-badge" id="settings-badge" style="display:none">!</span></div>
+      <span class="nav-label">Réglages</span>
     </button>
   </nav>
 
@@ -387,6 +409,31 @@ function loadState() {
   } catch(e) {}
 }
 
+function getApiKey() {
+  return localStorage.getItem('fc_api_key') || '';
+}
+
+function saveApiKey() {
+  const key = document.getElementById('api-key-input').value.trim();
+  if (!key.startsWith('sk-ant-')) {
+    document.getElementById('api-key-status').innerHTML = '<span style="color:var(--orange)">⚠️ Clé invalide — doit commencer par sk-ant-</span>';
+    return;
+  }
+  localStorage.setItem('fc_api_key', key);
+  document.getElementById('api-key-status').innerHTML = '<span style="color:var(--green)">✅ Clé enregistrée !</span>';
+  document.getElementById('settings-badge').style.display = 'none';
+  setTimeout(() => switchScreenByName('generate'), 1200);
+}
+
+function checkApiKey() {
+  const key = getApiKey();
+  if (!key) {
+    document.getElementById('settings-badge').style.display = 'block';
+  }
+  const input = document.getElementById('api-key-input');
+  if (input && key) input.value = key;
+}
+
 function saveState() {
   try {
     localStorage.setItem('fc_pantry', JSON.stringify(pantryItems));
@@ -398,6 +445,7 @@ function saveState() {
 }
 
 loadState();
+checkApiKey();
 
 // ══════════════════════════════════════
 // UTILS
@@ -533,6 +581,11 @@ updatePantryBanner();
 // GENERATE
 // ══════════════════════════════════════
 async function generateWeek() {
+  if (!getApiKey()) {
+    showToast('⚙️ Ajoutez votre clé API dans Réglages');
+    switchScreenByName('settings');
+    return;
+  }
   const btn = document.getElementById('gen-btn');
   btn.disabled = true;
   document.getElementById('loading').classList.add('show');
@@ -592,7 +645,7 @@ IMPORTANT : marque inStock:true pour les ingrédients déjà dans le stock. N'in
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": "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", "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+      headers: { "Content-Type": "application/json", "x-api-key": getApiKey(), "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
         max_tokens: 1000,
